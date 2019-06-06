@@ -1,0 +1,8 @@
+{
+  "name": "stepFunctionsPlugin",
+  "version": "0.0.1",
+  "dependencies": {
+    "serverless-pseudo-parameters": "^2.4.0",
+    "serverless-step-functions": "^1.21.1"
+  }
+}

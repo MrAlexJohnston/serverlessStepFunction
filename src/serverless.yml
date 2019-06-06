@@ -1,0 +1,86 @@
+service: aj-step-functions-plugin
+provider:
+  name: aws
+  runtime: nodejs10.x
+  region: eu-west-1
+  iamRoleStatements:
+  - Effect: "Allow"
+    Action:
+      - "states:ListStateMachines"
+      - "states:StartExecution"
+    Resource: "arn:aws:states:*:*:*"
+functions:
+  executeStepFunction:
+    handler: handler.executeStepFunction
+    events:
+      - http:
+          path: run
+          method: get
+  isNumberInteger:
+    handler: handler.isNumberInteger
+  roundNumber:
+    handler: handler.roundNumber
+  calculateRandomNumber:
+    handler: handler.calculateRandomNumber
+  numberOddOrEven:
+    handler: handler.numberOddOrEven
+  lessOrMoreThan5:
+    handler: handler.lessOrMoreThan5
+  finalState:
+    handler: handler.finalState
+plugins:
+  - serverless-step-functions
+  - serverless-pseudo-parameters
+stepFunctions:
+  stateMachines:
+    testingStateMachineAJ:
+      name: testingStateMachineAJ
+      definition:
+        Comment: "An example of the Amazon States Language using a parallel state to execute two branches at the same time."
+        StartAt: isNumberInteger
+        States:
+          isNumberInteger:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-isNumberInteger
+            Next: integerChoice
+          integerChoice:
+            Type: Choice
+            Choices:
+            - Variable: "$.integer"
+              BooleanEquals: true
+              Next: calculateRandomNumber
+            - Variable: "$.integer"
+              BooleanEquals: false
+              Next: roundNumber
+            Default: DefaultState
+          DefaultState:
+            Type: Fail
+            Cause: "Integer value neither false or true"
+          roundNumber:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-roundNumber
+            Next: integerChoice
+          calculateRandomNumber:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-calculateRandomNumber
+            Next: Parallel
+          Parallel:
+            Type: Parallel
+            Next: finalState
+            Branches:
+            - StartAt: numberOddOrEven
+              States:
+                numberOddOrEven:
+                  Type: Task
+                  Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-numberOddOrEven
+                  End: true
+            - StartAt: lessOrMoreThan5
+              States:
+                lessOrMoreThan5:
+                  Type: Task
+                  Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-lessOrMoreThan5
+                  End: true
+          finalState:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-finalState
+            End: true
